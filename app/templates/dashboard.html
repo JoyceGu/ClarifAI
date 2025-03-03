@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClarifAI - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <h1 class="text-xl font-bold">ClarifAI</h1>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <span id="userRole" class="mr-4 text-gray-600"></span>
+                        <button onclick="logout()" class="text-gray-600 hover:text-gray-900">
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- PM Form -->
+            <div id="pmForm" class="hidden">
+                <div class="bg-white shadow rounded-lg p-6 mb-6">
+                    <h2 class="text-lg font-medium mb-4">Submit New Requirement</h2>
+                    <form id="requirementForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Title</label>
+                            <input type="text" id="title" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Business Goal and Data Scope</label>
+                            <textarea id="businessGoal" rows="3" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                placeholder="Include your business objective and the relevant data dimensions (time range, geographic scope, user segments, etc.)"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Data Scope</label>
+                            <textarea id="dataScope" rows="3" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Expected Output</label>
+                            <select id="expectedOutput" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Select output type</option>
+                                <option value="Actionable Insights">Actionable Insights</option>
+                                <option value="Data Visualization">Data Visualization</option>
+                                <option value="Statistical Analysis">Statistical Analysis</option>
+                                <option value="Predictive Model">Predictive Model</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Deadline</label>
+                            <input type="date" id="deadline" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+
+                        <div class="flex space-x-4">
+                            <button type="button" id="verifyButton" 
+                                class="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                Verify Requirement
+                            </button>
+                            <button type="submit" id="submitButton" disabled
+                                class="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 opacity-50 cursor-not-allowed">
+                                Submit Requirement
+                            </button>
+                        </div>
+                        <div id="verificationMessage" class="text-sm text-red-500 hidden">
+                            The requirement must have a Clarity Score of at least 70% to be submitted.
+                        </div>
+                    </form>
+                </div>
+
+                <!-- AI Feedback Section -->
+                <div id="aiFeedback" class="hidden bg-white shadow rounded-lg p-6 mb-6">
+                    <h3 class="text-lg font-medium mb-4">AI Feedback</h3>
+                    <div id="feedbackContent" class="prose"></div>
+                    <div class="mt-4 grid grid-cols-3 gap-4">
+                        <div class="text-center">
+                            <div class="text-sm font-medium text-gray-500">Clarity Score</div>
+                            <div id="clarityScore" class="mt-1 text-2xl font-semibold text-indigo-600">-</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-sm font-medium text-gray-500">Feasibility Score</div>
+                            <div id="feasibilityScore" class="mt-1 text-2xl font-semibold text-indigo-600">-</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-sm font-medium text-gray-500">Completeness Score</div>
+                            <div id="completenessScore" class="mt-1 text-2xl font-semibold text-indigo-600">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Requirements List -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-lg font-medium mb-4">Requirements</h2>
+                <div id="requirementsList" class="space-y-4">
+                    <!-- Requirements will be dynamically added here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Check authentication
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+        
+        if (!token) {
+            window.location.href = '/';
+        }
+
+        // Update UI based on role
+        document.getElementById('userRole').textContent = role.toUpperCase();
+        if (role === 'pm') {
+            document.getElementById('pmForm').classList.remove('hidden');
+        }
+
+        // Load requirements
+        async function loadRequirements() {
+            try {
+                const response = await fetch('/api/requirements/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const requirements = await response.json();
+                const requirementsList = document.getElementById('requirementsList');
+                requirementsList.innerHTML = '';
+                
+                requirements.forEach(req => {
+                    const reqElement = document.createElement('div');
+                    reqElement.className = 'border rounded-lg p-4';
+                    reqElement.innerHTML = `
+                        <h3 class="font-medium">${req.title}</h3>
+                        <p class="text-sm text-gray-600 mt-2">${req.business_goal}</p>
+                        <div class="mt-2 flex justify-between items-center">
+                            <div class="text-sm text-gray-500">
+                                Due: ${new Date(req.deadline).toLocaleDateString()}
+                            </div>
+                            <div class="flex space-x-2">
+                                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                                    Clarity: ${(req.clarity_score * 100).toFixed(0)}%
+                                </span>
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                    Feasibility: ${(req.feasibility_score * 100).toFixed(0)}%
+                                </span>
+                                <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                                    Completeness: ${(req.completeness_score * 100).toFixed(0)}%
+                                </span>
+                            </div>
+                        </div>
+                        ${role === 'researcher' ? `
+                            <div class="mt-4">
+                                <textarea id="feedback-${req.id}" class="w-full rounded-md border-gray-300" rows="2" placeholder="Add your feedback"></textarea>
+                                <button onclick="submitFeedback(${req.id})" class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm">
+                                    Submit Feedback
+                                </button>
+                            </div>
+                        ` : ''}
+                    `;
+                    requirementsList.appendChild(reqElement);
+                });
+            } catch (error) {
+                console.error('Error loading requirements:', error);
+            }
+        }
+
+        // Verify requirement
+        document.getElementById('verifyButton')?.addEventListener('click', async () => {
+            const formData = {
+                title: document.getElementById('title').value,
+                business_goal: document.getElementById('businessGoal').value,
+                data_scope: document.getElementById('dataScope').value,
+                expected_output: document.getElementById('expectedOutput').value
+            };
+
+            try {
+                // Simple client-side validation
+                if (!formData.title || !formData.business_goal || !formData.data_scope || 
+                    !formData.expected_output) {
+                    alert('Please fill in all fields before verification');
+                    return;
+                }
+
+                // Show loading state
+                document.getElementById('verifyButton').disabled = true;
+                document.getElementById('verifyButton').textContent = "Analyzing...";
+                document.getElementById('aiFeedback').classList.remove('hidden');
+                document.getElementById('feedbackContent').textContent = "Analyzing your requirement...";
+                
+                // Call the AI service to analyze the requirement
+                const response = await fetch('/api/verify-requirement/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to verify requirement: ${response.status}`);
+                }
+                
+                const result = await response.json();
+
+                // Display score and determine if requirement can be submitted
+                const clarityPercentage = (result.clarity_score * 100).toFixed(0);
+                document.getElementById('clarityScore').textContent = `${clarityPercentage}%`;
+                document.getElementById('feasibilityScore').textContent = `${(result.feasibility_score * 100).toFixed(0)}%`;
+                document.getElementById('completenessScore').textContent = `${(result.completeness_score * 100).toFixed(0)}%`;
+                document.getElementById('feedbackContent').textContent = result.ai_feedback;
+                
+                // Enable or disable submit button based on clarity score
+                const submitButton = document.getElementById('submitButton');
+                const verificationMessage = document.getElementById('verificationMessage');
+                
+                if (result.clarity_score >= 0.7) {
+                    submitButton.disabled = false;
+                    submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                    verificationMessage.classList.add('hidden');
+                } else {
+                    submitButton.disabled = true;
+                    submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+                    verificationMessage.classList.remove('hidden');
+                }
+                
+            } catch (error) {
+                console.error('Error during verification:', error);
+                alert('Error during verification: ' + error.message);
+                document.getElementById('feedbackContent').textContent = "Error during verification. Please try again.";
+            } finally {
+                // Reset button state
+                document.getElementById('verifyButton').disabled = false;
+                document.getElementById('verifyButton').textContent = "Verify Requirement";
+            }
+        });
+
+        // Submit requirement form
+        document.getElementById('requirementForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                title: document.getElementById('title').value,
+                business_goal: document.getElementById('businessGoal').value,
+                data_scope: document.getElementById('dataScope').value,
+                expected_output: document.getElementById('expectedOutput').value,
+                deadline: document.getElementById('deadline').value
+            };
+            
+            try {
+                const response = await fetch('/api/requirements/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Show AI feedback
+                    document.getElementById('aiFeedback').classList.remove('hidden');
+                    document.getElementById('feedbackContent').textContent = data.ai_feedback;
+                    document.getElementById('clarityScore').textContent = `${(data.clarity_score * 100).toFixed(0)}%`;
+                    document.getElementById('feasibilityScore').textContent = `${(data.feasibility_score * 100).toFixed(0)}%`;
+                    document.getElementById('completenessScore').textContent = `${(data.completeness_score * 100).toFixed(0)}%`;
+                    
+                    // Reset form and reload requirements
+                    e.target.reset();
+                    loadRequirements();
+                    
+                    // Reset submit button state
+                    const submitButton = document.getElementById('submitButton');
+                    submitButton.disabled = true;
+                    submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+                    document.getElementById('verificationMessage').classList.add('hidden');
+                } else {
+                    alert('Failed to submit requirement: ' + data.detail);
+                }
+            } catch (error) {
+                alert('Failed to submit requirement: ' + error.message);
+            }
+        });
+
+        // Submit feedback
+        async function submitFeedback(requirementId) {
+            const content = document.getElementById(`feedback-${requirementId}`).value;
+            
+            try {
+                const response = await fetch(`/api/requirements/${requirementId}/feedback`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content })
+                });
+                
+                if (response.ok) {
+                    alert('Feedback submitted successfully');
+                    loadRequirements();
+                } else {
+                    const data = await response.json();
+                    alert('Failed to submit feedback: ' + data.detail);
+                }
+            } catch (error) {
+                alert('Failed to submit feedback: ' + error.message);
+            }
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            window.location.href = '/';
+        }
+
+        // Load initial data
+        loadRequirements();
+    </script>
+</body>
+</html> 
