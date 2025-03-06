@@ -48,7 +48,13 @@ async def create_requirement(
         )
     
     # Convert string date to datetime
-    deadline_dt = datetime.fromisoformat(deadline.replace('Z', '+00:00')) if deadline else None
+    deadline_dt = None
+    if deadline and deadline.strip():
+        try:
+            deadline_dt = datetime.fromisoformat(deadline.replace('Z', '+00:00'))
+        except (ValueError, TypeError):
+            # Handle invalid date format
+            pass
         
     # Process uploaded files (if needed)
     file_info = []
