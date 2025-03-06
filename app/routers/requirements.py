@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel
 from ..database import get_db
@@ -13,6 +13,7 @@ router = APIRouter()
 
 class RequirementCreate(BaseModel):
     title: str
+    priority: str
     business_goal: str
     data_scope: str
     expected_output: str
@@ -23,13 +24,20 @@ class FeedbackCreate(BaseModel):
 
 class RequirementVerify(BaseModel):
     title: str
+    priority: str
     business_goal: str
     data_scope: str
     expected_output: str
 
 @router.post("/requirements/")
 async def create_requirement(
-    req: RequirementCreate,
+    title: str = Form(...),
+    priority: str = Form(...),
+    business_goal: str = Form(...),
+    data_scope: str = Form(...),
+    expected_output: str = Form(...),
+    deadline: str = Form(...),
+    files: List[UploadFile] = File(None),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -38,22 +46,41 @@ async def create_requirement(
             status_code=403,
             detail="Only PMs can create requirements"
         )
+    
+    # Convert string date to datetime
+    deadline_dt = datetime.fromisoformat(deadline.replace('Z', '+00:00'))
+        
+    # Process uploaded files (if needed)
+    file_info = []
+    if files:
+        for file in files:
+            # In a real app, you would save the file content to disk or cloud storage
+            # Here we just store the filename and size
+            file_info.append(f"{file.filename} ({len(await file.read()) / 1024:.1f} KB)")
+            # Reset file position after reading
+            await file.seek(0)
+    
+    # Append file information to data_scope if files were uploaded
+    if file_info:
+        data_scope = f"{data_scope} - Files: {', '.join(file_info)}"
         
     # Use AI service to analyze requirement
     clarity_score, feasibility_score, completeness_score, ai_feedback = await analyze_requirement(
-        req.title,
-        req.business_goal,
-        req.data_scope,
-        req.expected_output
+        title,
+        business_goal,
+        data_scope,
+        expected_output,
+        priority
     )
     
     requirement = Requirement(
         creator_id=current_user.id,
-        title=req.title,
-        business_goal=req.business_goal,
-        data_scope=req.data_scope,
-        expected_output=req.expected_output,
-        deadline=req.deadline,
+        title=title,
+        priority=priority,
+        business_goal=business_goal,
+        data_scope=data_scope,
+        expected_output=expected_output,
+        deadline=deadline_dt,
         clarity_score=clarity_score,
         feasibility_score=feasibility_score,
         completeness_score=completeness_score,
@@ -79,12 +106,17 @@ async def verify_requirement(
             detail="Only PMs can verify requirements"
         )
     
+    # For verification, we don't actually process files, just 
+    # acknowledge their existence in the data_scope field
+    data_scope = req.data_scope
+    
     # Use AI service to analyze requirement
     clarity_score, feasibility_score, completeness_score, ai_feedback = await analyze_requirement(
         req.title,
         req.business_goal,
-        req.data_scope,
-        req.expected_output
+        data_scope,
+        req.expected_output,
+        req.priority
     )
     
     return {

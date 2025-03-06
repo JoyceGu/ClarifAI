@@ -41,16 +41,33 @@
                         </div>
 
                         <div>
+                            <label class="block text-sm font-medium text-gray-700">Priority</label>
+                            <select id="priority" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Select priority</option>
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-medium text-gray-700">Business Goal and Data Scope</label>
-                            <textarea id="businessGoal" rows="3" required
+                            <textarea id="businessGoal" rows="5" required
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 placeholder="Include your business objective and the relevant data dimensions (time range, geographic scope, user segments, etc.)"></textarea>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Data Scope</label>
-                            <textarea id="dataScope" rows="3" required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+                            <label class="block text-sm font-medium text-gray-700">Supporting Files</label>
+                            <div class="mt-1 flex items-center">
+                                <label for="supportingFiles" class="cursor-pointer px-4 py-2 bg-white border border-gray-300 rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                    Upload files
+                                    <input id="supportingFiles" name="supportingFiles" type="file" class="sr-only" multiple>
+                                </label>
+                                <span class="ml-3 text-sm text-gray-500" id="fileCount"></span>
+                            </div>
+                            <div id="fileList" class="mt-1 text-sm text-gray-600"></div>
                         </div>
 
                         <div>
@@ -150,7 +167,16 @@
                     const reqElement = document.createElement('div');
                     reqElement.className = 'border rounded-lg p-4';
                     reqElement.innerHTML = `
-                        <h3 class="font-medium">${req.title}</h3>
+                        <div class="flex justify-between">
+                            <h3 class="font-medium">${req.title}</h3>
+                            <span class="${
+                                req.priority === 'High' ? 'bg-red-100 text-red-800' : 
+                                req.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 
+                                'bg-green-100 text-green-800'
+                            } px-2 py-1 text-xs rounded-full">
+                                ${req.priority}
+                            </span>
+                        </div>
                         <p class="text-sm text-gray-600 mt-2">${req.business_goal}</p>
                         <div class="mt-2 flex justify-between items-center">
                             <div class="text-sm text-gray-500">
@@ -184,20 +210,48 @@
             }
         }
 
+        // Add file upload handling
+        document.getElementById('supportingFiles')?.addEventListener('change', function(e) {
+            const fileList = document.getElementById('fileList');
+            const fileCount = document.getElementById('fileCount');
+            fileList.innerHTML = '';
+            
+            if (this.files.length > 0) {
+                fileCount.textContent = `${this.files.length} 个文件已选择`;
+                
+                if (this.files.length <= 3) {
+                    // 只有当文件数量较少时才显示详细列表
+                    const list = document.createElement('ul');
+                    list.className = 'list-disc pl-5';
+                    
+                    Array.from(this.files).forEach(file => {
+                        const item = document.createElement('li');
+                        item.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                        list.appendChild(item);
+                    });
+                    
+                    fileList.appendChild(list);
+                }
+            } else {
+                fileCount.textContent = '';
+            }
+        });
+
         // Verify requirement
         document.getElementById('verifyButton')?.addEventListener('click', async () => {
             const formData = {
                 title: document.getElementById('title').value,
+                priority: document.getElementById('priority').value,
                 business_goal: document.getElementById('businessGoal').value,
-                data_scope: document.getElementById('dataScope').value,
+                data_scope: "Files uploaded: " + (document.getElementById('supportingFiles').files.length || 0) + " file(s)",
                 expected_output: document.getElementById('expectedOutput').value
             };
 
             try {
                 // Simple client-side validation
-                if (!formData.title || !formData.business_goal || !formData.data_scope || 
-                    !formData.expected_output) {
-                    alert('Please fill in all fields before verification');
+                if (!formData.title || !formData.business_goal || 
+                    !formData.expected_output || !formData.priority) {
+                    alert('Please fill in all required fields before verification');
                     return;
                 }
 
@@ -259,22 +313,31 @@
         document.getElementById('requirementForm')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const formData = {
-                title: document.getElementById('title').value,
-                business_goal: document.getElementById('businessGoal').value,
-                data_scope: document.getElementById('dataScope').value,
-                expected_output: document.getElementById('expectedOutput').value,
-                deadline: document.getElementById('deadline').value
-            };
+            // Create FormData object for file uploads
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('priority', document.getElementById('priority').value);
+            formData.append('business_goal', document.getElementById('businessGoal').value);
+            formData.append('expected_output', document.getElementById('expectedOutput').value);
+            formData.append('deadline', document.getElementById('deadline').value);
+            
+            // Get supporting files
+            const fileInput = document.getElementById('supportingFiles');
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('files', fileInput.files[i]);
+            }
+            
+            // Add a data_scope field describing the uploaded files
+            const fileNames = Array.from(fileInput.files).map(f => f.name).join(', ');
+            formData.append('data_scope', fileNames || 'No files uploaded');
             
             try {
                 const response = await fetch('/api/requirements/', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+                        'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify(formData)
+                    body: formData
                 });
                 
                 const data = await response.json();

@@ -22,6 +22,7 @@ class Requirement(Base):
     id = Column(Integer, primary_key=True, index=True)
     creator_id = Column(Integer, ForeignKey("users.id"))
     title = Column(String)
+    priority = Column(String, default="Medium")  # "High", "Medium", "Low"
     business_goal = Column(Text)
     data_scope = Column(Text)
     expected_output = Column(String)
