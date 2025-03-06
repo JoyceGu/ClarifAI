@@ -16,6 +16,14 @@
                         <div class="flex-shrink-0 flex items-center">
                             <h1 class="text-xl font-bold">ClarifAI</h1>
                         </div>
+                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                            <a href="/dashboard" class="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                Dashboard
+                            </a>
+                            <a href="/all-tasks" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                All Tasks
+                            </a>
+                        </div>
                     </div>
                     <div class="flex items-center">
                         <span id="userRole" class="mr-4 text-gray-600"></span>
@@ -72,7 +80,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Expected Output</label>
-                            <select id="expectedOutput" required
+                            <select id="expectedOutput"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">Select output type</option>
                                 <option value="Actionable Insights">Actionable Insights</option>
@@ -84,7 +92,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Deadline</label>
-                            <input type="date" id="deadline" required
+                            <input type="date" id="deadline"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                         </div>
 
@@ -98,8 +106,8 @@
                                 Submit Requirement
                             </button>
                         </div>
-                        <div id="verificationMessage" class="text-sm text-red-500 hidden">
-                            The requirement must have a Clarity Score of at least 70% to be submitted.
+                        <div id="verificationMessage" class="text-sm text-gray-500 hidden">
+                            Verification complete. You can now submit your requirement regardless of the scores.
                         </div>
                     </form>
                 </div>
@@ -107,7 +115,7 @@
                 <!-- AI Feedback Section -->
                 <div id="aiFeedback" class="hidden bg-white shadow rounded-lg p-6 mb-6">
                     <h3 class="text-lg font-medium mb-4">AI Feedback</h3>
-                    <div id="feedbackContent" class="prose"></div>
+                    <div id="feedbackContent" class="prose whitespace-pre-line text-sm leading-relaxed"></div>
                     <div class="mt-4 grid grid-cols-3 gap-4">
                         <div class="text-center">
                             <div class="text-sm font-medium text-gray-500">Clarity Score</div>
@@ -127,7 +135,13 @@
 
             <!-- Requirements List -->
             <div class="bg-white shadow rounded-lg p-6">
-                <h2 class="text-lg font-medium mb-4">Requirements</h2>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-medium">Task History</h2>
+                    <a href="/all-tasks" class="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700">
+                        View All
+                    </a>
+                </div>
+                <p class="text-sm text-gray-500 mb-4">Showing your 5 most recent requirements</p>
                 <div id="requirementsList" class="space-y-4">
                     <!-- Requirements will be dynamically added here -->
                 </div>
@@ -159,9 +173,15 @@
                     }
                 });
                 
-                const requirements = await response.json();
+                let requirements = await response.json();
                 const requirementsList = document.getElementById('requirementsList');
                 requirementsList.innerHTML = '';
+                
+                // Sort requirements by creation date (newest first)
+                requirements.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                
+                // Only show the 5 most recent requirements
+                requirements = requirements.slice(0, 5);
                 
                 requirements.forEach(req => {
                     const reqElement = document.createElement('div');
@@ -180,7 +200,8 @@
                         <p class="text-sm text-gray-600 mt-2">${req.business_goal}</p>
                         <div class="mt-2 flex justify-between items-center">
                             <div class="text-sm text-gray-500">
-                                Due: ${new Date(req.deadline).toLocaleDateString()}
+                                <span>Created: ${new Date(req.created_at).toLocaleDateString()}</span>
+                                ${req.deadline ? `<span class="ml-3">Due: ${new Date(req.deadline).toLocaleDateString()}</span>` : ''}
                             </div>
                             <div class="flex space-x-2">
                                 <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
@@ -249,9 +270,8 @@
 
             try {
                 // Simple client-side validation
-                if (!formData.title || !formData.business_goal || 
-                    !formData.expected_output || !formData.priority) {
-                    alert('Please fill in all required fields before verification');
+                if (!formData.title || !formData.business_goal || !formData.priority) {
+                    alert('Please fill in the required fields (Title, Priority, and Business Goal) before verification');
                     return;
                 }
 
@@ -271,32 +291,43 @@
                     body: JSON.stringify(formData)
                 });
                 
+                // 获取响应文本
+                const responseText = await response.text();
+                
                 if (!response.ok) {
-                    throw new Error(`Failed to verify requirement: ${response.status}`);
+                    // 尝试从错误响应中提取信息
+                    console.error('Verification error - Server response:', responseText);
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        throw new Error(errorData.detail || `Server returned ${response.status} ${response.statusText}`);
+                    } catch (parseError) {
+                        throw new Error(`Server returned ${response.status} ${response.statusText}`);
+                    }
                 }
                 
-                const result = await response.json();
+                // 解析JSON响应
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('Error parsing verification response:', parseError);
+                    throw new Error('Received malformed response from server.');
+                }
 
-                // Display score and determine if requirement can be submitted
+                // Display score 
                 const clarityPercentage = (result.clarity_score * 100).toFixed(0);
                 document.getElementById('clarityScore').textContent = `${clarityPercentage}%`;
                 document.getElementById('feasibilityScore').textContent = `${(result.feasibility_score * 100).toFixed(0)}%`;
                 document.getElementById('completenessScore').textContent = `${(result.completeness_score * 100).toFixed(0)}%`;
                 document.getElementById('feedbackContent').textContent = result.ai_feedback;
                 
-                // Enable or disable submit button based on clarity score
+                // Always enable submit button after verification, regardless of clarity score
                 const submitButton = document.getElementById('submitButton');
                 const verificationMessage = document.getElementById('verificationMessage');
                 
-                if (result.clarity_score >= 0.7) {
-                    submitButton.disabled = false;
-                    submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
-                    verificationMessage.classList.add('hidden');
-                } else {
-                    submitButton.disabled = true;
-                    submitButton.classList.add('opacity-50', 'cursor-not-allowed');
-                    verificationMessage.classList.remove('hidden');
-                }
+                submitButton.disabled = false;
+                submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                verificationMessage.classList.add('hidden');
                 
             } catch (error) {
                 console.error('Error during verification:', error);
@@ -340,30 +371,48 @@
                     body: formData
                 });
                 
-                const data = await response.json();
+                // 先获取响应文本，然后根据需要解析
+                const responseText = await response.text();
                 
                 if (response.ok) {
-                    // Show AI feedback
-                    document.getElementById('aiFeedback').classList.remove('hidden');
-                    document.getElementById('feedbackContent').textContent = data.ai_feedback;
-                    document.getElementById('clarityScore').textContent = `${(data.clarity_score * 100).toFixed(0)}%`;
-                    document.getElementById('feasibilityScore').textContent = `${(data.feasibility_score * 100).toFixed(0)}%`;
-                    document.getElementById('completenessScore').textContent = `${(data.completeness_score * 100).toFixed(0)}%`;
-                    
-                    // Reset form and reload requirements
-                    e.target.reset();
-                    loadRequirements();
-                    
-                    // Reset submit button state
-                    const submitButton = document.getElementById('submitButton');
-                    submitButton.disabled = true;
-                    submitButton.classList.add('opacity-50', 'cursor-not-allowed');
-                    document.getElementById('verificationMessage').classList.add('hidden');
+                    try {
+                        // 解析JSON响应
+                        const data = JSON.parse(responseText);
+                        
+                        // Show AI feedback
+                        document.getElementById('aiFeedback').classList.remove('hidden');
+                        document.getElementById('feedbackContent').textContent = data.ai_feedback;
+                        document.getElementById('clarityScore').textContent = `${(data.clarity_score * 100).toFixed(0)}%`;
+                        document.getElementById('feasibilityScore').textContent = `${(data.feasibility_score * 100).toFixed(0)}%`;
+                        document.getElementById('completenessScore').textContent = `${(data.completeness_score * 100).toFixed(0)}%`;
+                        
+                        // Reset form and reload requirements
+                        e.target.reset();
+                        loadRequirements();
+                        
+                        // Reset submit button state
+                        const submitButton = document.getElementById('submitButton');
+                        submitButton.disabled = true;
+                        submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+                        document.getElementById('verificationMessage').classList.add('hidden');
+                    } catch (parseError) {
+                        console.error('Error parsing JSON response:', parseError);
+                        alert('Successfully submitted, but received malformed response from server.');
+                    }
                 } else {
-                    alert('Failed to submit requirement: ' + data.detail);
+                    // 对于错误响应，尝试解析错误信息
+                    console.error('Server response:', responseText);
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        alert('Failed to submit requirement: ' + (errorData.detail || 'Server error'));
+                    } catch (parseError) {
+                        // 如果无法解析为JSON，则显示HTTP状态码和响应文本的前100个字符
+                        alert(`Failed to submit requirement: Server returned ${response.status} ${response.statusText}`);
+                    }
                 }
             } catch (error) {
                 alert('Failed to submit requirement: ' + error.message);
+                console.error('Error details:', error);
             }
         });
 
@@ -381,15 +430,24 @@
                     body: JSON.stringify({ content })
                 });
                 
+                // 获取响应文本
+                const responseText = await response.text();
+                
                 if (response.ok) {
                     alert('Feedback submitted successfully');
                     loadRequirements();
                 } else {
-                    const data = await response.json();
-                    alert('Failed to submit feedback: ' + data.detail);
+                    // 尝试解析错误信息
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        alert('Failed to submit feedback: ' + (errorData.detail || 'Server error'));
+                    } catch (parseError) {
+                        alert(`Failed to submit feedback: Server returned ${response.status} ${response.statusText}`);
+                    }
                 }
             } catch (error) {
                 alert('Failed to submit feedback: ' + error.message);
+                console.error('Feedback submission error:', error);
             }
         }
 

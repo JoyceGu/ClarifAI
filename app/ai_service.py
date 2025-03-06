@@ -4,21 +4,21 @@ import re
 import random
 import math
 
-# 常见的业务词汇和指标
+# Common business terms and metrics
 BUSINESS_METRICS = {
     'revenue', 'sales', 'profit', 'margin', 'roi', 'conversion', 'retention', 'churn', 'cac', 'ltv',
     'growth', 'revenue', 'engagement', 'acquisition', 'activation', 'referral', 'monetization',
     'kpi', 'metric', 'benchmark', 'performance'
 }
 
-# 数据相关词汇
+# Data related terms
 DATA_TERMS = {
     'database', 'dataset', 'csv', 'excel', 'sql', 'nosql', 'api', 'json', 'xml', 'import',
     'export', 'file', 'data', 'source', 'schema', 'query', 'table', 'field', 'column',
     'record', 'entry', 'report', 'dashboard', 'visualization', 'chart', 'graph'
 }
 
-# 分析方法词汇
+# Analysis method terms
 ANALYSIS_METHODS = {
     'regression', 'classification', 'clustering', 'recommendation', 'forecast', 'prediction',
     'segmentation', 'modeling', 'trend', 'correlation', 'causation', 'inference', 'hypothesis',
@@ -27,14 +27,14 @@ ANALYSIS_METHODS = {
 }
 
 class RequirementAnalyzer:
-    """模拟AI分析需求的类"""
+    """Class to simulate AI analysis of requirements"""
     
     def __init__(self):
-        # 添加一些随机性，使每次分析结果稍有不同
+        # Add some randomness to make each analysis slightly different
         self.randomness = 0.1
     
     def _check_keywords(self, text: str, keyword_set: Set[str]) -> float:
-        """检查文本中包含关键词集合中词汇的比例"""
+        """Check the proportion of keywords from a set that appear in the text"""
         if not text:
             return 0.0
         
@@ -44,20 +44,20 @@ class RequirementAnalyzer:
             if keyword in text:
                 found += 1
         
-        # 如果文本很短但包含关键词，应该得到较高分数
+        # If text is short but contains keywords, it should get a higher score
         text_length_factor = min(1.0, len(text) / 200.0)
         if text_length_factor < 0.3 and found > 0:
             text_length_factor = 0.3
             
-        # 计算分数，最高为1.0
+        # Calculate score, maximum of 1.0
         score = min(1.0, (found / min(10, len(keyword_set))) * text_length_factor)
         return score
     
     def _analyze_title(self, title: str) -> Dict[str, float]:
-        """分析标题质量"""
+        """Analyze title quality"""
         results = {}
         
-        # 标题长度评分
+        # Title length score
         title_length = len(title)
         if title_length < 5:
             results['length'] = 0.2
@@ -66,9 +66,9 @@ class RequirementAnalyzer:
         elif title_length < 50:
             results['length'] = 0.9
         else:
-            results['length'] = 0.7  # 太长的标题也不好
+            results['length'] = 0.7  # Too long titles aren't good either
             
-        # 标题描述性评分
+        # Title descriptiveness score
         words = len(title.split())
         if words < 2:
             results['descriptive'] = 0.3
@@ -77,15 +77,15 @@ class RequirementAnalyzer:
         elif words < 8:
             results['descriptive'] = 0.9
         else:
-            results['descriptive'] = 0.7  # 太多词的标题可能不够聚焦
+            results['descriptive'] = 0.7  # Too many words might not be focused enough
             
         return results
     
     def _analyze_business_goal(self, business_goal: str) -> Dict[str, float]:
-        """分析业务目标质量"""
+        """Analyze business goal quality"""
         results = {}
         
-        # 长度评分
+        # Length score
         length = len(business_goal)
         if length < 30:
             results['length'] = 0.2
@@ -94,15 +94,15 @@ class RequirementAnalyzer:
         elif length < 500:
             results['length'] = 0.9
         else:
-            results['length'] = 0.8  # 太长可能有冗余
+            results['length'] = 0.8  # Too long might be redundant
             
-        # 业务指标词汇评分
+        # Business metrics term score
         results['metrics'] = self._check_keywords(business_goal, BUSINESS_METRICS)
         
-        # 段落结构评分
+        # Paragraph structure score
         paragraphs = business_goal.count('\n') + 1
         if paragraphs == 1 and length > 200:
-            results['structure'] = 0.4  # 长文本应该有段落
+            results['structure'] = 0.4  # Long text should have paragraphs
         elif paragraphs > 1:
             results['structure'] = 0.8
         else:
@@ -111,128 +111,126 @@ class RequirementAnalyzer:
         return results
     
     def _analyze_data_scope(self, data_scope: str) -> Dict[str, float]:
-        """分析数据范围质量"""
+        """Analyze data scope quality"""
         results = {}
         
-        # 检查是否包含文件上传信息
+        # Since data_scope has been changed to Supporting Files for file uploads,
+        # we should not use it to impact clarity score
+        # Just provide a default high score for this section
+        results['files'] = 0.8
+        results['description'] = 0.8
+        results['data_terms'] = 0.8
+        
+        # The presence of files is noted but not scored critically
         has_files = "Files uploaded:" in data_scope or "Files:" in data_scope
         if has_files:
-            results['files'] = 0.9
-            # 检查文件数量
+            # Log file info but don't use for scoring
             file_count_match = re.search(r'(\d+)\s+file', data_scope)
             if file_count_match:
                 file_count = int(file_count_match.group(1))
-                if file_count > 3:
-                    results['file_quantity'] = 0.9
-                elif file_count > 0:
-                    results['file_quantity'] = 0.7
-                else:
-                    results['file_quantity'] = 0.0
-        else:
-            results['files'] = 0.0
-            
-            # 如果没有文件，检查文本描述
-            length = len(data_scope)
-            if length < 30:
-                results['description'] = 0.2
-            elif length < 100:
-                results['description'] = 0.6
-            else:
-                results['description'] = 0.9
-                
-            # 检查是否包含数据术语
-            results['data_terms'] = self._check_keywords(data_scope, DATA_TERMS)
-            
+                results['file_noted'] = True
+                results['file_count'] = file_count
+        
         return results
     
     def _analyze_expected_output(self, expected_output: str, priority: str = "Medium") -> Dict[str, float]:
-        """分析预期输出质量"""
+        """Analyze expected output quality"""
         results = {}
         
-        # 检查是否是预定义选项之一
+        # If expected_output is empty, set a default score that won't negatively impact overall scores
+        if not expected_output:
+            results['validity'] = 0.7  # Higher default score so it doesn't negatively impact
+            results['priority_alignment'] = 0.7
+            results['optional_field'] = 1.0  # Mark as optional field with perfect score
+            return results
+            
+        # Check if it's one of the predefined options
         valid_outputs = {"Actionable Insights", "Data Visualization", "Statistical Analysis", "Predictive Model"}
         if expected_output in valid_outputs:
             results['validity'] = 1.0
             
-            # 根据优先级调整期望
+            # Adjust expectations based on priority
             if expected_output == "Predictive Model" and priority == "Low":
-                results['priority_alignment'] = 0.4  # 预测模型通常不是低优先级的好选择
+                results['priority_alignment'] = 0.4  # Predictive models usually not a good choice for low priority
             elif expected_output == "Actionable Insights" and priority == "High":
-                results['priority_alignment'] = 0.9  # 可操作洞见适合高优先级
+                results['priority_alignment'] = 0.9  # Actionable insights are good for high priority
             else:
                 results['priority_alignment'] = 0.7
         else:
-            # 自定义输出
+            # Custom output
             results['validity'] = 0.5
-            results['custom'] = 0.7  # 鼓励定制化
+            results['custom'] = 0.7  # Encourage customization
             
-            # 检查是否包含分析方法术语
+            # Check if it contains analysis method terms
             results['analysis_terms'] = self._check_keywords(expected_output, ANALYSIS_METHODS)
             
         return results
     
     def _generate_title_feedback(self, title_scores: Dict[str, float]) -> List[str]:
-        """生成标题反馈"""
+        """Generate title feedback"""
         feedback = []
         
         if title_scores.get('length', 1.0) < 0.5:
-            feedback.append("标题过短，建议提供更具描述性的标题，以便研究人员更好地理解需求内容。")
+            feedback.append("Title is too short. Consider providing a more descriptive title to help researchers better understand the requirement content.")
         elif title_scores.get('length', 0.0) > 0.9:
-            feedback.append("标题较长，考虑精简以突出重点。")
+            feedback.append("Title is quite long. Consider making it more concise to highlight the key points.")
             
         if title_scores.get('descriptive', 1.0) < 0.6:
-            feedback.append("标题不够具体，建议使用更多描述性词汇来清晰表达需求的核心目标。")
+            feedback.append("Title is not specific enough. Try using more descriptive words to clearly express the core objective of the requirement.")
             
         return feedback
     
     def _generate_business_goal_feedback(self, goal_scores: Dict[str, float]) -> List[str]:
-        """生成业务目标反馈"""
+        """Generate business goal feedback"""
         feedback = []
         
         if goal_scores.get('length', 1.0) < 0.5:
-            feedback.append("业务目标描述过于简短，建议详细阐述业务背景、具体目标和期望达成的业务价值。")
+            feedback.append("Business goal description is too brief. Consider elaborating on the business context, specific objectives, and expected business value.")
         
         if goal_scores.get('metrics', 1.0) < 0.5:
-            feedback.append("业务目标中缺乏具体的业务指标，建议明确定义需要改进或跟踪的关键绩效指标(KPI)。")
+            feedback.append("Business goal lacks specific business metrics. Consider clearly defining the key performance indicators (KPIs) that need to be improved or tracked.")
             
         if goal_scores.get('structure', 1.0) < 0.6:
-            feedback.append("业务目标的结构可以优化，考虑分段描述业务背景、具体问题、解决方案期望等。")
+            feedback.append("Structure of the business goal could be improved. Consider breaking it down into sections describing business context, specific problems, and solution expectations.")
             
         return feedback
     
     def _generate_data_scope_feedback(self, scope_scores: Dict[str, float]) -> List[str]:
-        """生成数据范围反馈"""
+        """Generate data scope feedback"""
         feedback = []
         
-        if scope_scores.get('files', 0.0) > 0.5:
-            if scope_scores.get('file_quantity', 0.0) < 0.6:
-                feedback.append("已上传文件，但数量较少。如有更多相关数据文件，建议一并提供以便更全面分析。")
+        # Since supporting files is optional and doesn't affect clarity score,
+        # we only provide general information
+        if scope_scores.get('file_noted', False):
+            file_count = scope_scores.get('file_count', 0)
+            if file_count > 0:
+                feedback.append(f"You've uploaded {file_count} supporting file(s). This will help researchers better understand your requirements.")
+            else:
+                feedback.append("You've indicated file uploads, but no files were detected. This is optional and won't affect your clarity score.")
         else:
-            if scope_scores.get('description', 0.0) < 0.6:
-                feedback.append("未上传文件，且数据范围描述不足。建议详细说明需要分析的数据内容、时间范围、数据格式等。")
-            
-            if scope_scores.get('data_terms', 0.0) < 0.4:
-                feedback.append("数据描述中缺少关键的数据术语，建议具体说明数据来源、数据格式、数据量级等信息。")
+            feedback.append("No supporting files were uploaded. This is optional and won't affect your clarity score.")
                 
         return feedback
     
     def _generate_expected_output_feedback(self, output_scores: Dict[str, float]) -> List[str]:
-        """生成预期输出反馈"""
+        """Generate expected output feedback"""
         feedback = []
         
-        if output_scores.get('validity', 0.0) < 1.0:
-            feedback.append("所选预期输出不在标准选项中，可能会导致研究人员对需求理解产生歧义。")
+        # If validity is 0.5 and there's no other scores, it means expected_output was empty
+        if output_scores.get('validity', 0.0) == 0.5 and len(output_scores) <= 2:
+            feedback.append("No expected output has been specified. While this is optional for requirement verification, specifying an expected output could provide researchers with clearer guidance.")
+            return feedback
+            
+        if output_scores.get('validity', 0.0) < 1.0 and output_scores.get('validity', 0.0) > 0:
+            feedback.append("The selected expected output is not among standard options. Consider selecting one of the standard options for better clarity.")
             
         if output_scores.get('priority_alignment', 1.0) < 0.6:
-            feedback.append("所选预期输出与设定的优先级不太匹配，建议重新考虑输出形式或调整优先级。")
-            
-        if output_scores.get('analysis_terms', 0.0) < 0.4 and 'custom' in output_scores:
-            feedback.append("预期输出中缺少具体的分析方法描述，建议明确说明希望使用的分析技术或方法论。")
+            feedback.append("Note: The selected expected output and priority combination is uncommon. You may want to reconsider either, but this won't affect your requirement's clarity score.")
             
         return feedback
     
     def _add_randomness(self, score: float) -> float:
-        """添加随机波动，使结果更自然"""
+        """Add random variation to make results more natural"""
         variation = (random.random() - 0.5) * self.randomness
         return max(0.0, min(1.0, score + variation))
     
@@ -244,78 +242,85 @@ class RequirementAnalyzer:
         expected_output: str,
         priority: str = "Medium"
     ) -> Tuple[float, float, float, str]:
-        """分析需求并生成分数和反馈"""
+        """Analyze requirements and generate scores and feedback"""
         
-        # 分析各部分内容
+        # Analyze each part of the content
         title_scores = self._analyze_title(title)
         goal_scores = self._analyze_business_goal(business_goal)
         scope_scores = self._analyze_data_scope(data_scope)
         output_scores = self._analyze_expected_output(expected_output, priority)
         
-        # 计算总体分数
+        # Calculate overall scores
         clarity_score = self._add_randomness(
-            (sum(title_scores.values()) / len(title_scores) * 0.2) +
-            (sum(goal_scores.values()) / len(goal_scores) * 0.4) +
-            (sum(scope_scores.values()) / len(scope_scores) * 0.4)
+            (sum(title_scores.values()) / len(title_scores) * 0.4) +
+            (sum(goal_scores.values()) / len(goal_scores) * 0.6)
+            # Removed data_scope (now Supporting Files) from clarity calculation
         )
         
         feasibility_score = self._add_randomness(
-            (sum(scope_scores.values()) / len(scope_scores) * 0.6) +
-            (sum(output_scores.values()) / len(output_scores) * 0.4)
+            (sum(scope_scores.values()) / len(scope_scores) * 0.4) +
+            (sum(output_scores.values()) / len(output_scores) * 0.5) +
+            (0.8 if expected_output else 0.5) * 0.1  # Still consider expected_output for feasibility
         )
         
         completeness_score = self._add_randomness(
-            (0.8 if title else 0.0) * 0.1 +
-            (min(1.0, len(business_goal) / 200) * 0.4) +
-            (0.9 if "Files" in data_scope else min(1.0, len(data_scope) / 150) * 0.3) +
-            (0.8 if expected_output else 0.0) * 0.2
+            (0.8 if title else 0.0) * 0.15 +
+            (min(1.0, len(business_goal) / 200) * 0.5) +
+            (0.9 if "Files" in data_scope else min(1.0, len(data_scope) / 150) * 0.35)
+            # Removed expected_output from completeness calculation
         )
         
-        # 生成反馈
+        # Generate feedback
         feedback_parts = []
         
-        # 明确采用的评分标准
-        feedback_parts.append("需求分析结果基于以下维度：标题描述性、业务目标清晰度、数据范围明确度和预期输出合理性。")
+        # Clearly state the scoring criteria used
+        feedback_parts.append("Requirement analysis results are based primarily on title descriptiveness and business goal clarity. Supporting Files, Expected Output, and Deadline are optional fields and do not affect the Clarity Score.")
         
-        # 生成总体评价
+        # Generate overall assessment
         avg_score = (clarity_score + feasibility_score + completeness_score) / 3
         if avg_score >= 0.8:
-            feedback_parts.append("总体评价：您的需求定义非常全面，研究人员可以直接开始工作。")
+            feedback_parts.append("\n\n📊 Overall assessment: Your requirement definition is very comprehensive, and researchers can start working immediately.")
         elif avg_score >= 0.6:
-            feedback_parts.append("总体评价：您的需求基本合理，但有一些地方可以进一步优化。")
+            feedback_parts.append("\n\n📊 Overall assessment: Your requirement is generally reasonable, but there are some areas that could be further optimized.")
         else:
-            feedback_parts.append("总体评价：您的需求定义需要显著改进，才能使研究人员理解并开始工作。")
+            feedback_parts.append("\n\n📊 Overall assessment: Your requirement definition needs significant improvement before researchers can understand and begin working on it.")
         
-        # 各部分具体反馈
+        # Specific feedback for each part
+        all_feedback = []
+        
         title_feedback = self._generate_title_feedback(title_scores)
         if title_feedback:
-            feedback_parts.append("标题反馈：" + " ".join(title_feedback))
+            all_feedback.append("\n\n📝 Title feedback:\n• " + "\n• ".join(title_feedback))
             
         goal_feedback = self._generate_business_goal_feedback(goal_scores)
         if goal_feedback:
-            feedback_parts.append("业务目标反馈：" + " ".join(goal_feedback))
+            all_feedback.append("\n\n🎯 Business goal feedback:\n• " + "\n• ".join(goal_feedback))
             
         scope_feedback = self._generate_data_scope_feedback(scope_scores)
         if scope_feedback:
-            feedback_parts.append("数据范围反馈：" + " ".join(scope_feedback))
+            all_feedback.append("\n\n📁 Data scope feedback:\n• " + "\n• ".join(scope_feedback))
             
         output_feedback = self._generate_expected_output_feedback(output_scores)
         if output_feedback:
-            feedback_parts.append("预期输出反馈：" + " ".join(output_feedback))
+            all_feedback.append("\n\n📈 Expected output feedback:\n• " + "\n• ".join(output_feedback))
         
-        # 最后提供一些鼓励
+        # Add all detailed feedback
+        if all_feedback:
+            feedback_parts.extend(all_feedback)
+        
+        # Provide some encouragement at the end
         if avg_score >= 0.7:
-            feedback_parts.append("您的需求定义已经很好，只需要小幅调整即可进一步提高清晰度。")
+            feedback_parts.append("\n\n✅ Your requirement definition is already good. Only minor adjustments are needed to further improve clarity.")
         else:
-            feedback_parts.append("根据以上反馈调整您的需求，可以大幅提高研究人员理解和实施的效率。")
+            feedback_parts.append("\n\n⚠️ Adjusting your requirement based on the above feedback can significantly improve researchers' understanding and implementation efficiency.")
         
-        # 组合所有反馈
-        feedback = " ".join(feedback_parts)
+        # Combine all feedback
+        feedback = "".join(feedback_parts)
         
-        # 返回三个评分和反馈
+        # Return the three scores and feedback
         return clarity_score, feasibility_score, completeness_score, feedback
 
-# 创建全局分析器实例
+# Create a global analyzer instance
 analyzer = RequirementAnalyzer()
 
 async def analyze_requirement(
@@ -326,7 +331,7 @@ async def analyze_requirement(
     priority: str = "Medium"
 ) -> Tuple[float, float, float, str]:
     """
-    分析需求并生成分数和反馈
+    Analyze requirements and generate scores and feedback
     
     Returns:
         Tuple containing clarity_score, feasibility_score, completeness_score, and feedback.

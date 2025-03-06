@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClarifAI - All Tasks</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <h1 class="text-xl font-bold">ClarifAI</h1>
+                        </div>
+                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                            <a href="/dashboard" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                Dashboard
+                            </a>
+                            <a href="/all-tasks" class="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                All Tasks
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <span id="userRole" class="mr-4 text-gray-600"></span>
+                        <button onclick="logout()" class="text-gray-600 hover:text-gray-900">
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div class="bg-white shadow rounded-lg p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-lg font-medium">All Tasks History</h2>
+                    <a href="/dashboard" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm hover:bg-gray-300">
+                        Back to Dashboard
+                    </a>
+                </div>
+                
+                <!-- Filter and Sort Options -->
+                <div class="mb-6 flex flex-wrap gap-4">
+                    <div>
+                        <label for="priorityFilter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Priority</label>
+                        <select id="priorityFilter" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">All Priorities</option>
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="sortOption" class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                        <select id="sortOption" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="created_desc">Newest First</option>
+                            <option value="created_asc">Oldest First</option>
+                            <option value="priority_high">Priority (High to Low)</option>
+                            <option value="priority_low">Priority (Low to High)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="allTasksList" class="space-y-4">
+                    <!-- Tasks will be dynamically added here -->
+                    <div class="text-center py-10 text-gray-500">Loading tasks...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Check authentication
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+        
+        if (!token) {
+            window.location.href = '/';
+        }
+
+        // Update UI based on role
+        document.getElementById('userRole').textContent = role.toUpperCase();
+
+        // Load all requirements
+        async function loadAllTasks() {
+            try {
+                const response = await fetch('/api/requirements/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                let requirements = await response.json();
+                const tasksList = document.getElementById('allTasksList');
+                
+                if (requirements.length === 0) {
+                    tasksList.innerHTML = '<div class="text-center py-10 text-gray-500">No tasks found</div>';
+                    return;
+                }
+                
+                // Apply current filters and sorting
+                requirements = applyFiltersAndSort(requirements);
+                
+                // Clear the list and add tasks
+                tasksList.innerHTML = '';
+                
+                requirements.forEach(req => {
+                    const reqElement = document.createElement('div');
+                    reqElement.className = 'border rounded-lg p-4';
+                    reqElement.innerHTML = `
+                        <div class="flex justify-between">
+                            <h3 class="font-medium">${req.title}</h3>
+                            <span class="${
+                                req.priority === 'High' ? 'bg-red-100 text-red-800' : 
+                                req.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 
+                                'bg-green-100 text-green-800'
+                            } px-2 py-1 text-xs rounded-full">
+                                ${req.priority}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-2">${req.business_goal}</p>
+                        <div class="mt-2 flex flex-wrap justify-between items-center">
+                            <div class="text-sm text-gray-500">
+                                <span>Created: ${new Date(req.created_at).toLocaleDateString()}</span>
+                                ${req.deadline ? `<span class="ml-3">Due: ${new Date(req.deadline).toLocaleDateString()}</span>` : ''}
+                            </div>
+                            <div class="flex flex-wrap space-x-2 mt-2 sm:mt-0">
+                                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                                    Clarity: ${(req.clarity_score * 100).toFixed(0)}%
+                                </span>
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                    Feasibility: ${(req.feasibility_score * 100).toFixed(0)}%
+                                </span>
+                                <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                                    Completeness: ${(req.completeness_score * 100).toFixed(0)}%
+                                </span>
+                            </div>
+                        </div>
+                        ${role === 'researcher' ? `
+                            <div class="mt-4">
+                                <textarea id="feedback-${req.id}" class="w-full rounded-md border-gray-300" rows="2" placeholder="Add your feedback"></textarea>
+                                <button onclick="submitFeedback(${req.id})" class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm">
+                                    Submit Feedback
+                                </button>
+                            </div>
+                        ` : ''}
+                    `;
+                    tasksList.appendChild(reqElement);
+                });
+            } catch (error) {
+                console.error('Error loading requirements:', error);
+                document.getElementById('allTasksList').innerHTML = 
+                    '<div class="text-center py-10 text-red-500">Error loading tasks. Please try again later.</div>';
+            }
+        }
+        
+        // Apply filters and sorting
+        function applyFiltersAndSort(requirements) {
+            const priorityFilter = document.getElementById('priorityFilter').value;
+            const sortOption = document.getElementById('sortOption').value;
+            
+            // Apply priority filter
+            if (priorityFilter) {
+                requirements = requirements.filter(req => req.priority === priorityFilter);
+            }
+            
+            // Apply sorting
+            switch(sortOption) {
+                case 'created_desc':
+                    requirements.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    break;
+                case 'created_asc':
+                    requirements.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                    break;
+                case 'priority_high':
+                    requirements.sort((a, b) => {
+                        const priorityValues = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                        return priorityValues[b.priority] - priorityValues[a.priority];
+                    });
+                    break;
+                case 'priority_low':
+                    requirements.sort((a, b) => {
+                        const priorityValues = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                        return priorityValues[a.priority] - priorityValues[b.priority];
+                    });
+                    break;
+            }
+            
+            return requirements;
+        }
+        
+        // Add event listeners for filters and sorting
+        document.getElementById('priorityFilter').addEventListener('change', loadAllTasks);
+        document.getElementById('sortOption').addEventListener('change', loadAllTasks);
+        
+        // Submit feedback
+        async function submitFeedback(requirementId) {
+            const content = document.getElementById(`feedback-${requirementId}`).value;
+            
+            try {
+                const response = await fetch(`/api/requirements/${requirementId}/feedback`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content })
+                });
+                
+                if (response.ok) {
+                    alert('Feedback submitted successfully');
+                    loadAllTasks();
+                } else {
+                    const data = await response.json();
+                    alert('Failed to submit feedback: ' + data.detail);
+                }
+            } catch (error) {
+                alert('Failed to submit feedback: ' + error.message);
+            }
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            window.location.href = '/';
+        }
+
+        // Load initial data
+        loadAllTasks();
+    </script>
+</body>
+</html> 

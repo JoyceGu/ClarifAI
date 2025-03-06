@@ -38,4 +38,8 @@ async def home(request: Request):
 
 @app.get("/dashboard")
 async def dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request}) 
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
+@app.get("/all-tasks")
+async def all_tasks(request: Request):
+    return templates.TemplateResponse("all_tasks.html", {"request": request}) 

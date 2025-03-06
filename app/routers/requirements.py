@@ -16,8 +16,8 @@ class RequirementCreate(BaseModel):
     priority: str
     business_goal: str
     data_scope: str
-    expected_output: str
-    deadline: datetime
+    expected_output: Optional[str] = None
+    deadline: Optional[datetime] = None
 
 class FeedbackCreate(BaseModel):
     content: str
@@ -27,7 +27,7 @@ class RequirementVerify(BaseModel):
     priority: str
     business_goal: str
     data_scope: str
-    expected_output: str
+    expected_output: Optional[str] = None
 
 @router.post("/requirements/")
 async def create_requirement(
@@ -35,8 +35,8 @@ async def create_requirement(
     priority: str = Form(...),
     business_goal: str = Form(...),
     data_scope: str = Form(...),
-    expected_output: str = Form(...),
-    deadline: str = Form(...),
+    expected_output: Optional[str] = Form(None),
+    deadline: Optional[str] = Form(None),
     files: List[UploadFile] = File(None),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
@@ -48,7 +48,7 @@ async def create_requirement(
         )
     
     # Convert string date to datetime
-    deadline_dt = datetime.fromisoformat(deadline.replace('Z', '+00:00'))
+    deadline_dt = datetime.fromisoformat(deadline.replace('Z', '+00:00')) if deadline else None
         
     # Process uploaded files (if needed)
     file_info = []
@@ -110,12 +110,15 @@ async def verify_requirement(
     # acknowledge their existence in the data_scope field
     data_scope = req.data_scope
     
+    # Set default empty string for expected_output if None
+    expected_output = req.expected_output if req.expected_output is not None else ""
+    
     # Use AI service to analyze requirement
     clarity_score, feasibility_score, completeness_score, ai_feedback = await analyze_requirement(
         req.title,
         req.business_goal,
         data_scope,
-        req.expected_output,
+        expected_output,
         req.priority
     )
     
