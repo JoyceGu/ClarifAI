@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import outerjoin
 from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel
@@ -152,23 +153,22 @@ async def get_requirements(
     async with db as session:
         if current_user.role == "pm":
             # PMs see their own requirements
-            result = await session.execute(
-                select(Requirement).filter(Requirement.creator_id == current_user.id)
-            )
+            query = select(Requirement, User.email.label("assigned_email")).outerjoin(
+                User, Requirement.assigned_to_id == User.id
+            ).where(Requirement.creator_id == current_user.id)
+            result = await session.execute(query)
         else:
             # Researchers see requirements assigned to them and unassigned ones
-            result = await session.execute(
-                select(Requirement).filter(
-                    (Requirement.assigned_to_id == current_user.id) | 
-                    (Requirement.assigned_to_id == None)
-                )
+            query = select(Requirement, User.email.label("assigned_email")).outerjoin(
+                User, Requirement.assigned_to_id == User.id
+            ).where(
+                (Requirement.assigned_to_id == current_user.id) | 
+                (Requirement.assigned_to_id == None)
             )
+            result = await session.execute(query)
             
-        requirements = result.scalars().all()
-        
-        # Include assignment info
         requirements_with_assignment = []
-        for req in requirements:
+        for req, assigned_email in result:
             req_dict = {
                 "id": req.id,
                 "creator_id": req.creator_id,
@@ -184,7 +184,7 @@ async def get_requirements(
                 "completeness_score": req.completeness_score,
                 "ai_feedback": req.ai_feedback,
                 "assigned_to_id": req.assigned_to_id,
-                "assigned_to": req.assigned_to.email if req.assigned_to else None
+                "assigned_to": assigned_email
             }
             requirements_with_assignment.append(req_dict)
         
@@ -347,4 +347,39 @@ async def update_requirement(
         await session.commit()
         await session.refresh(requirement)
         
-    return requirement 
+    return requirement
+
+@router.delete("/requirements/{requirement_id}")
+async def delete_requirement(
+    requirement_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a requirement"""
+    if current_user.role != "pm":
+        raise HTTPException(
+            status_code=403,
+            detail="Only PMs can delete requirements"
+        )
+        
+    async with db as session:
+        # Check if requirement exists and belongs to the current user
+        result = await session.execute(
+            select(Requirement).filter(
+                Requirement.id == requirement_id,
+                Requirement.creator_id == current_user.id
+            )
+        )
+        requirement = result.scalar_one_or_none()
+        
+        if not requirement:
+            raise HTTPException(
+                status_code=404,
+                detail="Requirement not found or you don't have permission to delete it"
+            )
+            
+        # Delete the requirement
+        await session.delete(requirement)
+        await session.commit()
+        
+    return {"message": "Requirement deleted successfully"} 

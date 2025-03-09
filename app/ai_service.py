@@ -3,6 +3,7 @@ from typing import Dict, Tuple, List, Set
 import re
 import random
 import math
+import asyncio
 
 # Common business terms and metrics
 BUSINESS_METRICS = {
@@ -336,4 +337,6 @@ async def analyze_requirement(
     Returns:
         Tuple containing clarity_score, feasibility_score, completeness_score, and feedback.
     """
-    return analyzer.analyze(title, business_goal, data_scope, expected_output, priority) 
+    # Use asyncio.to_thread to run the synchronous analyzer.analyze in a separate thread
+    # This prevents blocking the event loop and avoids the greenlet error
+    return await asyncio.to_thread(analyzer.analyze, title, business_goal, data_scope, expected_output, priority) 
