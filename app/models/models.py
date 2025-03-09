@@ -12,8 +12,9 @@ class User(Base):
     role = Column(String)  # "pm" or "researcher"
     is_active = Column(Boolean, default=True)
 
-    # Relationship with requirements
-    requirements = relationship("Requirement", back_populates="creator")
+    # Relationship with requirements - explicitly specify foreign key
+    requirements = relationship("Requirement", back_populates="creator", foreign_keys="Requirement.creator_id")
+    assigned_requirements = relationship("Requirement", foreign_keys="Requirement.assigned_to_id")
     feedbacks = relationship("Feedback", back_populates="researcher")
 
 class Requirement(Base):
@@ -21,6 +22,7 @@ class Requirement(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     creator_id = Column(Integer, ForeignKey("users.id"))
+    assigned_to_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     title = Column(String)
     priority = Column(String, default="Medium")  # "High", "Medium", "Low"
     business_goal = Column(Text)
@@ -38,7 +40,8 @@ class Requirement(Base):
     ai_feedback = Column(Text)
     
     # Relationships
-    creator = relationship("User", back_populates="requirements")
+    creator = relationship("User", back_populates="requirements", foreign_keys=[creator_id])
+    assigned_to = relationship("User", back_populates="assigned_requirements", foreign_keys=[assigned_to_id])
     feedbacks = relationship("Feedback", back_populates="requirement")
 
 class Feedback(Base):

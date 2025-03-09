@@ -29,6 +29,15 @@ class RequirementVerify(BaseModel):
     data_scope: str
     expected_output: Optional[str] = None
 
+class RequirementUpdate(BaseModel):
+    title: Optional[str] = None
+    priority: Optional[str] = None
+    business_goal: Optional[str] = None
+    data_scope: Optional[str] = None
+    expected_output: Optional[str] = None
+    deadline: Optional[datetime] = None
+    assigned_to_id: Optional[int] = None
+
 @router.post("/requirements/")
 async def create_requirement(
     title: str = Form(...),
@@ -147,12 +156,39 @@ async def get_requirements(
                 select(Requirement).filter(Requirement.creator_id == current_user.id)
             )
         else:
-            # Researchers see all requirements
-            result = await session.execute(select(Requirement))
+            # Researchers see requirements assigned to them and unassigned ones
+            result = await session.execute(
+                select(Requirement).filter(
+                    (Requirement.assigned_to_id == current_user.id) | 
+                    (Requirement.assigned_to_id == None)
+                )
+            )
             
         requirements = result.scalars().all()
         
-    return requirements
+        # Include assignment info
+        requirements_with_assignment = []
+        for req in requirements:
+            req_dict = {
+                "id": req.id,
+                "creator_id": req.creator_id,
+                "title": req.title,
+                "priority": req.priority,
+                "business_goal": req.business_goal,
+                "data_scope": req.data_scope,
+                "expected_output": req.expected_output,
+                "deadline": req.deadline,
+                "created_at": req.created_at,
+                "clarity_score": req.clarity_score,
+                "feasibility_score": req.feasibility_score,
+                "completeness_score": req.completeness_score,
+                "ai_feedback": req.ai_feedback,
+                "assigned_to_id": req.assigned_to_id,
+                "assigned_to": req.assigned_to.email if req.assigned_to else None
+            }
+            requirements_with_assignment.append(req_dict)
+        
+    return requirements_with_assignment
 
 @router.post("/requirements/{requirement_id}/feedback")
 async def create_feedback(
@@ -191,6 +227,26 @@ async def create_feedback(
         await session.refresh(feedback_obj)
         
     return feedback_obj
+
+@router.get("/researchers/")
+async def get_researchers(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all researchers for assignment"""
+    if current_user.role != "pm":
+        raise HTTPException(
+            status_code=403,
+            detail="Only PMs can view researchers list"
+        )
+        
+    async with db as session:
+        result = await session.execute(
+            select(User).filter(User.role == "researcher")
+        )
+        researchers = result.scalars().all()
+        
+    return [{"id": user.id, "email": user.email} for user in researchers]
 
 # Legacy helper functions - keeping these for fallback
 def calculate_clarity_score(business_goal: str, data_scope: str) -> float:
@@ -240,4 +296,55 @@ def generate_ai_feedback(business_goal: str, data_scope: str, expected_output: s
     if not feedback:
         feedback.append("Your requirement is well-defined. Consider adding any additional context that might help researchers.")
         
-    return " ".join(feedback) 
+    return " ".join(feedback)
+
+@router.put("/requirements/{requirement_id}")
+async def update_requirement(
+    requirement_id: int,
+    update_data: RequirementUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update an existing requirement or assign it to a researcher"""
+    if current_user.role != "pm":
+        raise HTTPException(
+            status_code=403,
+            detail="Only PMs can update requirements"
+        )
+        
+    async with db as session:
+        # Check if requirement exists and belongs to the current user
+        result = await session.execute(
+            select(Requirement).filter(
+                Requirement.id == requirement_id,
+                Requirement.creator_id == current_user.id
+            )
+        )
+        requirement = result.scalar_one_or_none()
+        
+        if not requirement:
+            raise HTTPException(
+                status_code=404,
+                detail="Requirement not found or you don't have permission to edit it"
+            )
+            
+        # Update fields if provided
+        update_dict = update_data.dict(exclude_unset=True)
+        for field, value in update_dict.items():
+            if field == 'assigned_to_id' and value is not None:
+                # Verify that the assigned user exists and is a researcher
+                user_result = await session.execute(
+                    select(User).filter(User.id == value, User.role == "researcher")
+                )
+                user = user_result.scalar_one_or_none()
+                if not user:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Invalid user ID or user is not a researcher"
+                    )
+            setattr(requirement, field, value)
+        
+        await session.commit()
+        await session.refresh(requirement)
+        
+    return requirement 

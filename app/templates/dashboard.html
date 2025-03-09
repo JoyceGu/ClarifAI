@@ -147,6 +147,99 @@
                 </div>
             </div>
         </main>
+
+        <!-- Edit Requirement Modal -->
+        <div id="editModal" class="fixed inset-0 z-10 hidden overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                    <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+                </div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Edit Requirement</h3>
+                        <form id="editForm" class="mt-4 space-y-4">
+                            <input type="hidden" id="editRequirementId">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Title</label>
+                                <input type="text" id="editTitle" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Priority</label>
+                                <select id="editPriority" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="High">High</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Low">Low</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Business Goal</label>
+                                <textarea id="editBusinessGoal" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Data Scope</label>
+                                <textarea id="editDataScope" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Expected Output</label>
+                                <select id="editExpectedOutput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="">Select output type</option>
+                                    <option value="Actionable Insights">Actionable Insights</option>
+                                    <option value="Data Visualization">Data Visualization</option>
+                                    <option value="Statistical Analysis">Statistical Analysis</option>
+                                    <option value="Predictive Model">Predictive Model</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Deadline</label>
+                                <input type="date" id="editDeadline" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button id="saveEditButton" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                            Save Changes
+                        </button>
+                        <button id="cancelEditButton" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assign Requirement Modal -->
+        <div id="assignModal" class="fixed inset-0 z-10 hidden overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                    <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+                </div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Assign to Researcher</h3>
+                        <form id="assignForm" class="mt-4">
+                            <input type="hidden" id="assignRequirementId">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Select Researcher</label>
+                                <select id="researcherSelect" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="">-- None (Unassign) --</option>
+                                    <!-- Researchers will be populated dynamically -->
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button id="saveAssignButton" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm">
+                            Assign
+                        </button>
+                        <button id="cancelAssignButton" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -202,6 +295,7 @@
                             <div class="text-sm text-gray-500">
                                 <span>Created: ${new Date(req.created_at).toLocaleDateString()}</span>
                                 ${req.deadline ? `<span class="ml-3">Due: ${new Date(req.deadline).toLocaleDateString()}</span>` : ''}
+                                ${req.assigned_to ? `<span class="ml-3 text-blue-600">Assigned to: ${req.assigned_to}</span>` : ''}
                             </div>
                             <div class="flex space-x-2">
                                 <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
@@ -222,7 +316,16 @@
                                     Submit Feedback
                                 </button>
                             </div>
-                        ` : ''}
+                        ` : `
+                            <div class="mt-4 flex justify-end space-x-2">
+                                <button onclick="openEditModal(${JSON.stringify(req).replace(/"/g, '&quot;')})" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded text-sm hover:bg-indigo-200">
+                                    Edit
+                                </button>
+                                <button onclick="openAssignModal(${req.id})" class="px-3 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200">
+                                    ${req.assigned_to ? 'Reassign' : 'Assign'}
+                                </button>
+                            </div>
+                        `}
                     `;
                     requirementsList.appendChild(reqElement);
                 });
@@ -457,6 +560,157 @@
             localStorage.removeItem('role');
             window.location.href = '/';
         }
+
+        // Open edit modal with requirement data
+        function openEditModal(req) {
+            document.getElementById('editRequirementId').value = req.id;
+            document.getElementById('editTitle').value = req.title;
+            document.getElementById('editPriority').value = req.priority;
+            document.getElementById('editBusinessGoal').value = req.business_goal;
+            document.getElementById('editDataScope').value = req.data_scope;
+            document.getElementById('editExpectedOutput').value = req.expected_output || '';
+            
+            // Handle deadline formatting
+            if (req.deadline) {
+                const date = new Date(req.deadline);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                document.getElementById('editDeadline').value = `${year}-${month}-${day}`;
+            } else {
+                document.getElementById('editDeadline').value = '';
+            }
+            
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+        
+        // Close edit modal
+        document.getElementById('cancelEditButton').addEventListener('click', function() {
+            document.getElementById('editModal').classList.add('hidden');
+        });
+        
+        // Handle requirement update
+        document.getElementById('saveEditButton').addEventListener('click', async function() {
+            const requirementId = document.getElementById('editRequirementId').value;
+            const updateData = {
+                title: document.getElementById('editTitle').value,
+                priority: document.getElementById('editPriority').value,
+                business_goal: document.getElementById('editBusinessGoal').value,
+                data_scope: document.getElementById('editDataScope').value,
+                expected_output: document.getElementById('editExpectedOutput').value,
+                deadline: document.getElementById('editDeadline').value || null
+            };
+            
+            try {
+                const response = await fetch(`/api/requirements/${requirementId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (response.ok) {
+                    document.getElementById('editModal').classList.add('hidden');
+                    loadRequirements();
+                    alert('Requirement updated successfully');
+                } else {
+                    const errorText = await response.text();
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        alert('Failed to update requirement: ' + (errorJson.detail || 'Unknown error'));
+                    } catch (e) {
+                        alert('Failed to update requirement: ' + (response.status || 'Unknown error'));
+                    }
+                }
+            } catch (error) {
+                alert('Error updating requirement: ' + error.message);
+                console.error('Update error:', error);
+            }
+        });
+        
+        // Open assign modal
+        async function openAssignModal(requirementId) {
+            document.getElementById('assignRequirementId').value = requirementId;
+            
+            // Fetch researchers list
+            try {
+                const response = await fetch('/api/researchers/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const researchers = await response.json();
+                    const selectElement = document.getElementById('researcherSelect');
+                    
+                    // Clear existing options except the first one
+                    while (selectElement.options.length > 1) {
+                        selectElement.remove(1);
+                    }
+                    
+                    // Add researcher options
+                    researchers.forEach(researcher => {
+                        const option = document.createElement('option');
+                        option.value = researcher.id;
+                        option.textContent = researcher.email;
+                        selectElement.appendChild(option);
+                    });
+                    
+                    document.getElementById('assignModal').classList.remove('hidden');
+                } else {
+                    alert('Failed to load researchers list');
+                }
+            } catch (error) {
+                alert('Error loading researchers: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+        
+        // Close assign modal
+        document.getElementById('cancelAssignButton').addEventListener('click', function() {
+            document.getElementById('assignModal').classList.add('hidden');
+        });
+        
+        // Handle assignment
+        document.getElementById('saveAssignButton').addEventListener('click', async function() {
+            const requirementId = document.getElementById('assignRequirementId').value;
+            const researcherId = document.getElementById('researcherSelect').value;
+            
+            try {
+                const updateData = {
+                    assigned_to_id: researcherId || null  // If empty string, send null
+                };
+                
+                const response = await fetch(`/api/requirements/${requirementId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (response.ok) {
+                    document.getElementById('assignModal').classList.add('hidden');
+                    loadRequirements();
+                    alert('Requirement assigned successfully');
+                } else {
+                    const errorText = await response.text();
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        alert('Failed to assign requirement: ' + (errorJson.detail || 'Unknown error'));
+                    } catch (e) {
+                        alert('Failed to assign requirement: ' + (response.status || 'Unknown error'));
+                    }
+                }
+            } catch (error) {
+                alert('Error assigning requirement: ' + error.message);
+                console.error('Assignment error:', error);
+            }
+        });
 
         // Load initial data
         loadRequirements();
