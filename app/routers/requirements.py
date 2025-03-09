@@ -248,6 +248,53 @@ async def get_researchers(
         
     return [{"id": user.id, "email": user.email} for user in researchers]
 
+@router.get("/requirements/{requirement_id}")
+async def get_requirement(
+    requirement_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get a single requirement by ID"""
+    
+    result = await db.execute(select(Requirement).filter(Requirement.id == requirement_id))
+    requirement = result.scalar_one_or_none()
+    
+    if not requirement:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Requirement not found"
+        )
+    
+    # If user is a researcher, verify they can access this requirement
+    if current_user.role == "researcher" and requirement.assigned_to_id != current_user.id and requirement.assigned_to_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to access this requirement"
+        )
+    
+    # Get the assigned researcher if exists
+    assigned_user = None
+    if requirement.assigned_to_id:
+        result = await db.execute(select(User).filter(User.id == requirement.assigned_to_id))
+        assigned_user = result.scalar_one_or_none()
+    
+    return {
+        "id": requirement.id,
+        "title": requirement.title,
+        "priority": requirement.priority,
+        "business_goal": requirement.business_goal,
+        "data_scope": requirement.data_scope,
+        "expected_output": requirement.expected_output,
+        "clarity_score": requirement.clarity_score,
+        "feasibility_score": requirement.feasibility_score,
+        "completeness_score": requirement.completeness_score,
+        "ai_feedback": requirement.ai_feedback,
+        "deadline": requirement.deadline,
+        "created_at": requirement.created_at,
+        "assigned_to_id": requirement.assigned_to_id,
+        "assigned_to": assigned_user.email if assigned_user else None
+    }
+
 # Legacy helper functions - keeping these for fallback
 def calculate_clarity_score(business_goal: str, data_scope: str) -> float:
     # Simple scoring based on length and completeness
@@ -382,4 +429,42 @@ async def delete_requirement(
         await session.delete(requirement)
         await session.commit()
         
-    return {"message": "Requirement deleted successfully"} 
+    return {"id": requirement.id, "message": "Requirement deleted successfully"}
+
+@router.get("/requirements/{requirement_id}/feedbacks")
+async def get_requirement_feedbacks(
+    requirement_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all feedbacks for a specific requirement"""
+    
+    # Check if requirement exists
+    result = await db.execute(select(Requirement).filter(Requirement.id == requirement_id))
+    requirement = result.scalar_one_or_none()
+    
+    if not requirement:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Requirement not found"
+        )
+    
+    # Get all feedbacks for this requirement
+    result = await db.execute(
+        select(Feedback)
+        .filter(Feedback.requirement_id == requirement_id)
+        .order_by(Feedback.created_at.desc())
+    )
+    
+    feedbacks = result.scalars().all()
+    
+    # Convert to response format
+    return [
+        {
+            "id": feedback.id,
+            "content": feedback.content,
+            "researcher_id": feedback.researcher_id,
+            "created_at": feedback.created_at
+        }
+        for feedback in feedbacks
+    ] 

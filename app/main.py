@@ -79,4 +79,8 @@ async def dashboard(request: Request):
 
 @app.get("/all-tasks")
 async def all_tasks(request: Request):
-    return templates.TemplateResponse("all_tasks.html", {"request": request}) 
+    return templates.TemplateResponse("all_tasks.html", {"request": request})
+
+@app.get("/task-detail/{task_id}")
+async def task_detail(request: Request, task_id: int):
+    return templates.TemplateResponse("task_detail.html", {"request": request, "task_id": task_id}) 

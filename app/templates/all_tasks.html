@@ -143,10 +143,9 @@
                             </div>
                         </div>
                         ${role === 'researcher' ? `
-                            <div class="mt-4">
-                                <textarea id="feedback-${req.id}" class="w-full rounded-md border-gray-300" rows="2" placeholder="Add your feedback"></textarea>
-                                <button onclick="submitFeedback(${req.id})" class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm">
-                                    Submit Feedback
+                            <div class="mt-4 text-right">
+                                <button onclick="viewTask(${req.id})" class="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700">
+                                    View
                                 </button>
                             </div>
                         ` : `
@@ -207,30 +206,9 @@
         document.getElementById('priorityFilter').addEventListener('change', loadAllTasks);
         document.getElementById('sortOption').addEventListener('change', loadAllTasks);
         
-        // Submit feedback
-        async function submitFeedback(requirementId) {
-            const content = document.getElementById(`feedback-${requirementId}`).value;
-            
-            try {
-                const response = await fetch(`/api/requirements/${requirementId}/feedback`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ content })
-                });
-                
-                if (response.ok) {
-                    alert('Feedback submitted successfully');
-                    loadAllTasks();
-                } else {
-                    const data = await response.json();
-                    alert('Failed to submit feedback: ' + data.detail);
-                }
-            } catch (error) {
-                alert('Failed to submit feedback: ' + error.message);
-            }
+        // Function to view a task
+        async function viewTask(taskId) {
+            window.location.href = `/task-detail/${taskId}`;
         }
 
         // Logout function
